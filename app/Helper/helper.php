@@ -5,6 +5,7 @@ namespace App\Helper;
 
 
 use App\Constants\WsMessage;
+use Hyperf\Server\Exception\ServerException;
 use Hyperf\Utils\ApplicationContext;
 use Hyperf\Utils\Codec\Json;
 use Hyperf\Utils\Context;
@@ -81,13 +82,13 @@ if (!function_exists('wsSuccess')) {
      * @param string $msg
      * @return string
      */
-    function wsSuccess($cmd = WsMessage::WS_MESSAGE_CMD_EVENT, $method = '', $data = [], $msg = 'Success')
+    function wsSuccess ($cmd = WsMessage::WS_MESSAGE_CMD_EVENT, $method = '', $data = [], $msg = 'Success')
     {
         $result = [
-            'cmd'    => $cmd,
+            'cmd' => $cmd,
             'method' => $method,
-            'msg'    => $msg,
-            'data'   => $data
+            'msg' => $msg,
+            'data' => $data
         ];
 
         return Json::encode($result);
@@ -101,13 +102,28 @@ if (!function_exists('wsError')) {
      * @param array  $data
      * @return string
      */
-    function wsError($msg = 'Error', $cmd = WsMessage::WS_MESSAGE_CMD_ERROR, $data = [])
+    function wsError ($msg = 'Error', $cmd = WsMessage::WS_MESSAGE_CMD_ERROR, $data = [])
     {
         $result = [
-            'cmd'  => $cmd,
-            'msg'  => $msg,
+            'cmd' => $cmd,
+            'msg' => $msg,
             'data' => $data
         ];
         return Json::encode($result);
+    }
+}
+
+if (!function_exists('exception')) {
+    /**
+     * @param        $class_name
+     * @param int    $code
+     * @param string $message
+     */
+    function exception ($class_name, $code = 0, $message = 'success')
+    {
+        if (!class_exists($class_name)) {
+            throw new ServerException($class_name . '：此方法不存在');
+        }
+        throw new $class_name($code, $message);
     }
 }

@@ -34,7 +34,9 @@
         "hyperf/event": "^2.0",
         "hyperf/testing": "^2.0",
       "ext-json": "*",
-      "ext-curl": "*"
+      "ext-curl": "*",
+        "hyperf/websocket-server": "^2.0",
+        "hyperf/task": "^2.0"
     },
     "require-dev": {
         "swoole/ide-helper": "^4.5",

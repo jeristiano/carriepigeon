@@ -245,10 +245,10 @@ class UserController extends AbstractController
      * @RequestMapping(path="setStatus",methods="POST")
      * @Middleware(JwtAuthMiddleware::class)
      */
-    public function setStatus()
+    public function setStatus ()
     {
 
-        $user   = $this->request->getAttribute('user');
+        $user = $this->request->getAttribute('user');
 
         $validated = $this->validator->make(
             $this->request->all(),
@@ -262,23 +262,22 @@ class UserController extends AbstractController
             );
         }
         $input = $validated->validated();
-        UserService::changeUserInfoById($user['uid'], ['status' =>(int) $input['status']]);
+        UserService::changeUserInfoById($user['uid'], ['status' => (int)$input['status']]);
         return $this->response->success();
     }
 
     /**
+     * 獲取
      * @RequestMapping(path="getApplication",methods="POST")
      * @Middleware(JwtAuthMiddleware::class)
      */
-    public function getApplication()
+    public function getAppMessages ()
     {
-
-        $user   = $this->request->getAttribute('user');
-        $page   = $this->request->input('page');
-        $size   = $this->request->input('size');
-//        $result = UserService::getApplication($user->id, (int)$page, (int)$size);
+        $user = $this->request->getAttribute('user');
+        $page = $this->request->input('page', 1);
+        $size = $this->request->input('size', 10);
+        $result = $this->userService->getApplication($user['uid'], (int)$page, (int)$size);
         return $this->response->success($result);
     }
-
 
 }

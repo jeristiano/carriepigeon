@@ -1,24 +1,41 @@
 <?php
 
 declare (strict_types=1);
+
 namespace App\Model;
 
 use Hyperf\DbConnection\Model\Model;
+
 /**
- * @property int $id
- * @property int $uid
- * @property int $receiver_id
- * @property int $group_id
- * @property string $application_type
- * @property int $application_status
- * @property string $application_reason
- * @property int $read_state
- * @property string $deleted_at
+ * @property int            $id
+ * @property int            $uid
+ * @property int            $receiver_id
+ * @property int            $group_id
+ * @property string         $application_type
+ * @property int            $application_status
+ * @property string         $application_reason
+ * @property int            $read_state
+ * @property string         $deleted_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
 class UserApplication extends Model
 {
+    /**
+     * The table associated with the model.
+     * @var string
+     */
+    protected $table = 'user_application';
+    /**
+     * The attributes that are mass assignable.
+     * @var array
+     */
+    protected $fillable = ['id', 'uid', 'receiver_id', 'group_id', 'application_type', 'application_status', 'application_reason', 'read_state', 'deleted_at', 'created_at', 'updated_at'];
+    /**
+     * The attributes that should be cast to native types.
+     * @var array
+     */
+    protected $casts = ['id' => 'integer', 'uid' => 'integer', 'receiver_id' => 'integer', 'group_id' => 'integer', 'application_status' => 'integer', 'read_state' => 'integer', 'created_at' => 'datetime', 'updated_at' => 'datetime'];
     const APPLICATION_STATUS_CREATE = 0;
     const APPLICATION_STATUS_ACCEPT = 1;
     const APPLICATION_STATUS_REFUSE = 2;
@@ -31,24 +48,16 @@ class UserApplication extends Model
     const APPLICATION_TYPE_FRIEND = 'friend';
     const APPLICATION_TYPE_GROUP = 'group';
 
+    protected $appends = [
+        'application_status_text',
+    ];
 
     /**
-     * The table associated with the model.
-     *
-     * @var string
+     * @param $attribute
+     * @return bool
      */
-    protected $table = 'user_application';
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
-    protected $fillable = ['id', 'uid', 'receiver_id', 'group_id', 'application_type', 'application_status', 'application_reason', 'read_state', 'deleted_at', 'created_at', 'updated_at'];
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array
-     */
-    protected $casts = ['id' => 'integer', 'uid' => 'integer', 'receiver_id' => 'integer', 'group_id' => 'integer', 'application_status' => 'integer', 'read_state' => 'integer', 'created_at' => 'datetime', 'updated_at' => 'datetime'];
-
+    public function getApplicationStatusTextAttribute ()
+    {
+        return $this->attributes['application_status_text'] = self::APPLICATION_STATUS_TEXT[$this->attributes['application_status']];
+    }
 }

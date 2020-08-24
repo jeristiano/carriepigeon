@@ -12,6 +12,8 @@ declare(strict_types=1);
 namespace HyperfTest\Cases;
 
 use App\Model\FriendRelation;
+use App\Model\User;
+use App\Model\UserApplication;
 use App\Service\FriendService;
 use App\Service\UserService;
 use HyperfTest\HttpTestCase;
@@ -85,4 +87,71 @@ class ExampleTest extends HttpTestCase
         })->toArray();
 
     }
+
+    public function testGetApplication ()
+    {
+        $uid = 39;
+        $page = 1;
+        $size = 10;
+
+        $messages = UserApplication::query()
+            ->where('uid', $uid)
+            ->whereNull('deleted_at')
+            ->orWhere('receiver_id', $uid)
+            ->forPage($page, $size)
+            ->orderByDesc('created_at')
+            ->get()
+            ->toArray();
+        $this->assertIsArray($messages, 'res is an array');
+
+        foreach ($messages as $key => $value) {
+            if ($uid != $value['uid']) {
+                $appIds[] = $value['id'];
+            }
+            if ($value['application_type'] == UserApplication::APPLICATION_TYPE_GROUP) {
+                $groupIds[] = $value['group_id'];
+            }
+
+            $userIds[] = $value['uid'];
+            $userIds[] = $value['receiver_id'];
+
+        }
+        $userIds = collect($userIds ?? [])->unique()->all();
+        $resu = [$appIds ?? [], $groupIds ?? [], $userIds];
+
+        $userInfos = User::query()->whereNull('deleted_at')
+            ->whereIn('id', $userIds)
+            ->get()->mapWithKeys(function ($item) {
+                return [$item['id'] => $item];
+            })->toJson();
+        var_dump($userInfos);
+    }
+
+    public function testGetRecommendedFriend ()
+    {
+        $uid = 39;
+//        $friendIds = FriendRelation::query()->where('uid', $uid)->pluck('friend_id');
+//        $friendIds[] = $uid;
+//
+//        $userInfos= User::query()
+//            ->whereNull('deleted_at')
+//            ->orderBy('created_at', 'desc')
+//            ->whereNotIn('id', $friendIds)
+//            ->limit(20)
+//            ->get()
+//            ->toArray();
+
+//        $friendIds=  make(FriendRelation::class)->getFriendIds(39);
+        $insert = [
+            'uid' => 39,
+            'friend_id' => 41,
+            'friend_group_id' => 7
+        ];
+        $friendIds = FriendRelation::query()
+//            ->where('id',20)
+            ->create($insert);
+        var_dump($friendIds);
+    }
+
+
 }
