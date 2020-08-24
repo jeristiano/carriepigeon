@@ -4,6 +4,7 @@
 namespace App\Service;
 
 
+use App\Component\Log\Log;
 use App\Constants\ErrorCode;
 use App\Constants\MemoryTable;
 use App\Exception\BusinessException;
@@ -14,6 +15,7 @@ use App\Model\User;
 use App\Model\UserApplication;
 use App\Task\FriendTask;
 use App\Task\UserTask;
+use Hyperf\DbConnection\Db;
 use Hyperf\Memory\TableManager;
 use function App\Helper\app;
 use function App\Helper\exception;
@@ -252,27 +254,33 @@ class FriendService
      */
     public static function agreeApply (int $uid, int $userApplicationId, int $friendGroupId)
     {
-        $userApp = self::beforeApply($uid, $userApplicationId, $friendGroupId);
-        self::findFriendGroupById($userApp->group_id);
-        self::findFriendGroupById($friendGroupId);
 
-        self::changeApplicationStatusById($userApplicationId, UserApplication::APPLICATION_STATUS_ACCEPT);
-        $fromCheck = self::checkIsFriendRelation($userApp->receiver_id, $userApp->uid);
-        $toCheck = self::checkIsFriendRelation($userApp->uid, $userApp->receiver_id);
+        Db::beginTransaction();
+        try {
 
-        if (!$fromCheck) {
-            self::createFriendRelation($userApp->receiver_id, $userApp->uid, $friendGroupId);
-            self::createFriendRelation($userApp->uid, $userApp->receiver_id, $userApp->group_id);
-        }
-
-        if ($fromCheck && $toCheck) {
-            throw new BusinessException(ErrorCode::FRIEND_RELATION_ALREADY);
-        }
-
-
-        $friendInfo = UserService::findUserInfoById($userApp->uid);
-        if(!$friendInfo){
-            throw new BusinessException(ErrorCode::USER_NOT_FOUND);
+            $userApp = self::beforeApply($uid, $userApplicationId, $friendGroupId);
+            self::findFriendGroupById($userApp->group_id);
+            self::findFriendGroupById($friendGroupId);
+            self::changeApplicationStatusById($userApplicationId, UserApplication::APPLICATION_STATUS_ACCEPT);
+            $fromCheck = self::checkIsFriendRelation($userApp->receiver_id, $userApp->uid);
+            $toCheck = self::checkIsFriendRelation($userApp->uid, $userApp->receiver_id);
+            if (!$fromCheck) {
+                self::createFriendRelation($userApp->receiver_id, $userApp->uid, $friendGroupId);
+                self::createFriendRelation($userApp->uid, $userApp->receiver_id, $userApp->group_id);
+            }
+            if ($fromCheck && $toCheck) {
+                throw new BusinessException(ErrorCode::FRIEND_RELATION_ALREADY);
+            }
+            $friendInfo = UserService::findUserInfoById($userApp->uid);
+            if (!$friendInfo) {
+                throw new BusinessException(ErrorCode::USER_NOT_FOUND);
+            }
+            Db::commit();
+        } catch (\Throwable $exception) {
+            Db::rollBack();
+            Log::warning('朋友邀请出现更新错误', [$exception->getMessage(), $exception->getFile(),
+                $exception->getLine()]);
+            throw new BusinessException(ErrorCode::FRIEND_GROUP_CREATE_FAIL);
         }
 
         self::pushMess($userApp, $friendInfo);
@@ -387,8 +395,8 @@ class FriendService
     {
         $selfInfo = UserService::findUserInfoById($userApplicationInfo->receiver_id);
 
-        if(!$selfInfo){
-            throw new BusinessException(ErrorCode::USER_NOT_FOUND,'用户id' .$userApplicationInfo->receiver_id.'不存在');
+        if (!$selfInfo) {
+            throw new BusinessException(ErrorCode::USER_NOT_FOUND, '用户id' . $userApplicationInfo->receiver_id . '不存在');
         }
 
         $pushUserInfo = [
