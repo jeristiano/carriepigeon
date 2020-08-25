@@ -13,6 +13,7 @@ namespace HyperfTest\Cases;
 
 use App\Model\FriendChatHistory;
 use App\Model\FriendRelation;
+use App\Model\GroupRelation;
 use App\Model\User;
 use App\Model\UserApplication;
 use App\Service\FriendService;
@@ -186,6 +187,27 @@ class ExampleTest extends HttpTestCase
         })->toArray();
         debug_print(json_encode($result));
         $this->assertIsArray($result,'array');
+    }
+
+
+    public function testGetGroupRelation(){
+        $groupRelations = GroupRelation::query()
+            ->with(['user'])
+            ->whereNull('deleted_at')
+            ->where(['group_id' => 7])
+            ->get()
+            ->toArray();
+
+        $data['list'] = collect($groupRelations)->map(function ($item) {
+            return [
+                'id' => $item['id'],
+                'username' => $item['user']['username'] ?? '',
+                'avatar' => $item['user']['avatar'] ?? '',
+                'sign' => $item['user']['content'] ?? '',
+            ];
+        })->toArray();
+        $this->assertIsArray($data);
+        debug_print($data);
     }
 
 

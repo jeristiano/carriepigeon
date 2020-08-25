@@ -441,7 +441,7 @@ class FriendService
             ->toArray();
 
 
-        return collect($history)->map(function ($item) {
+        $response = collect($history)->map(function ($item) {
             $id = $item['from_uid'];
             $user = User::findFromCache($id);
             return [
@@ -452,7 +452,10 @@ class FriendService
                 'timestamp' => Carbon::parse($item['created_at'])->timestamp * 1000,
             ];
         })->toArray();
-
+        return [
+            'list' => $response,
+            'count' => count($response),
+        ];
     }
 
     /**

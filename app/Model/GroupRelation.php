@@ -36,4 +36,15 @@ class GroupRelation extends Model
     {
         return $this->belongsTo(Group::class, 'group_id', 'id');
     }
+
+    /**
+     * @return \Hyperf\Database\Model\Relations\BelongsTo
+     */
+    public function user ()
+    {
+
+        return $this->belongsTo(User::class, 'uid', 'id');
+    }
+
+
 }
