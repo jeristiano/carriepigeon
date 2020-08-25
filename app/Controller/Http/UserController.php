@@ -21,7 +21,6 @@ use Hyperf\HttpServer\Annotation\Controller;
 use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\HttpServer\Annotation\RequestMapping;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use function App\Helper\get_client_ip;
 
 /**
  * @Controller(prefix="user")
@@ -279,5 +278,6 @@ class UserController extends AbstractController
         $result = $this->userService->getApplication($user['uid'], (int)$page, (int)$size);
         return $this->response->success($result);
     }
+
 
 }

@@ -24,7 +24,7 @@ class UserService
      */
     public static function findUserInfoById (int $uid)
     {
-        return User::query()->whereNull('deleted_at')->where(['id' => $uid])->first();
+        return User::query()->whereNull('deleted_at')->where(['id' => $uid])->first()?:[];
 
     }
 

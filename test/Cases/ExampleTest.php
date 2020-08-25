@@ -11,11 +11,15 @@ declare(strict_types=1);
 
 namespace HyperfTest\Cases;
 
+use App\Model\FriendChatHistory;
 use App\Model\FriendRelation;
 use App\Model\User;
 use App\Model\UserApplication;
 use App\Service\FriendService;
 use App\Service\UserService;
+use Carbon\Carbon;
+use Hyperf\Cache\Driver\RedisDriver;
+use Hyperf\Redis\Redis;
 use HyperfTest\HttpTestCase;
 
 /**
@@ -130,16 +134,16 @@ class ExampleTest extends HttpTestCase
     public function testGetRecommendedFriend ()
     {
         $uid = 39;
-//        $friendIds = FriendRelation::query()->where('uid', $uid)->pluck('friend_id');
-//        $friendIds[] = $uid;
-//
-//        $userInfos= User::query()
-//            ->whereNull('deleted_at')
-//            ->orderBy('created_at', 'desc')
-//            ->whereNotIn('id', $friendIds)
-//            ->limit(20)
-//            ->get()
-//            ->toArray();
+        $friendIds = FriendRelation::query()->where('uid', $uid)->pluck('friend_id');
+        $friendIds[] = $uid;
+
+        $userInfos= User::query()
+            ->whereNull('deleted_at')
+            ->orderBy('created_at', 'desc')
+            ->whereNotIn('id', $friendIds)
+            ->limit(20)
+            ->get()
+            ->toArray();
 
 //        $friendIds=  make(FriendRelation::class)->getFriendIds(39);
         $insert = [
@@ -151,6 +155,37 @@ class ExampleTest extends HttpTestCase
 //            ->where('id',20)
             ->create($insert);
         var_dump($friendIds);
+    }
+
+    /**
+     * @return int
+     */
+    public function testGetHistory(){
+
+        $history = FriendChatHistory::query()
+            ->whereNull('deleted_at')
+            ->where('from_uid', '=', 39)
+            ->where('to_uid', 40)
+            ->orWhere('from_uid', '=', 40)
+            ->where('to_uid', '=', 39)
+            ->orderBy('created_at', 'ASC')
+            ->forPage(1, 20)
+            ->get()
+            ->toArray();
+
+        $result= collect($history)->map(function ($item) {
+            $id = $item['from_uid'];
+            $user = User::findFromCache($id);
+            return [
+                'id' => $id,
+                'username' => $user['username'] ?? '',
+                'avatar' => $user['avatar'] ?? '',
+                'content' => $item['content'],
+                'timestamp' => Carbon::parse($item['created_at'])->timestamp * 1000,
+            ];
+        })->toArray();
+        debug_print(json_encode($result));
+        $this->assertIsArray($result,'array');
     }
 
 

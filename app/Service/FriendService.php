@@ -8,6 +8,7 @@ use App\Component\Log\Log;
 use App\Constants\ErrorCode;
 use App\Constants\MemoryTable;
 use App\Exception\BusinessException;
+use App\Model\FriendChatHistory;
 use App\Model\FriendGroup;
 use App\Model\FriendRelation;
 use App\Model\GroupRelation;
@@ -15,10 +16,9 @@ use App\Model\User;
 use App\Model\UserApplication;
 use App\Task\FriendTask;
 use App\Task\UserTask;
+use Carbon\Carbon;
 use Hyperf\DbConnection\Db;
 use Hyperf\Memory\TableManager;
-use function App\Helper\app;
-use function App\Helper\exception;
 
 /**
  * Class FriendService
@@ -337,7 +337,7 @@ class FriendService
             throw new BusinessException(ErrorCode::USER_APPLICATION_PROCESSED);
         }
 
-        if ($userApplication->receiver_id !== $request = $uid) {
+        if ($userApplication->receiver_id !== $uid) {
             throw new BusinessException(ErrorCode::NO_PERMISSION_PROCESS);
         }
     }
@@ -417,5 +417,63 @@ class FriendService
             }
         });
 
+    }
+
+
+    /**
+     * @param int $fromUserId
+     * @param int $userId
+     * @param int $page
+     * @param int $size
+     * @return array
+     */
+    public static function getChatHistory (int $fromUserId, int $userId, $page = 1, $size = 10)
+    {
+        $history = FriendChatHistory::query()
+            ->whereNull('deleted_at')
+            ->where('from_uid', '=', $fromUserId)
+            ->where('to_uid', $userId)
+            ->orWhere('from_uid', '=', $userId)
+            ->where('to_uid', $fromUserId)
+            ->orderBy('created_at', 'ASC')
+            ->forPage($page, $size)
+            ->get()
+            ->toArray();
+
+
+        return collect($history)->map(function ($item) {
+            $id = $item['from_uid'];
+            $user = User::findFromCache($id);
+            return [
+                'id' => $id,
+                'username' => $user['username'] ?? '',
+                'avatar' => $user['avatar'] ?? '',
+                'content' => $item['content'],
+                'timestamp' => Carbon::parse($item['created_at'])->timestamp * 1000,
+            ];
+        })->toArray();
+
+    }
+
+    /**
+     * 拒绝申请
+     * @param     $uid
+     * @param int $apply_id
+     */
+    public static function refuseApply (int $uid, int $apply_id)
+    {
+
+        $userApplicationInfo = self::beforeApply($uid, $apply_id, UserApplication::APPLICATION_TYPE_FRIEND);
+        self::changeApplicationStatusById($apply_id, UserApplication::APPLICATION_STATUS_REFUSE);
+
+
+        go(function () use ($userApplicationInfo) {
+            $fd = TableManager::get(MemoryTable::USER_TO_FD)->get((string)$userApplicationInfo->id, 'fd') ?? '';
+            if ($fd) {
+                app()->get(UserTask::class)->unReadApplicationCount($fd, '新');
+            }
+        });
+
+        return $userApplicationInfo;
     }
 }

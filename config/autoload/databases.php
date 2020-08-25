@@ -29,12 +29,13 @@ return [
             'max_idle_time' => (float) env('DB_MAX_IDLE_TIME', 60),
         ],
         'cache' => [
-            'handler' => Hyperf\ModelCache\Handler\RedisHandler::class,
+            'handler' => \Hyperf\ModelCache\Handler\RedisHandler::class,
             'cache_key' => 'mc:%s:m:%s:%s:%s',
             'prefix' => 'default',
             'ttl' => 3600 * 24,
-            'empty_model_ttl' => 600,
+            'empty_model_ttl' => 3600,
             'load_script' => true,
+            'use_default_value' => false,
         ],
         'commands' => [
             'gen:model' => [

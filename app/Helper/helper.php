@@ -1,9 +1,5 @@
 <?php
 
-
-namespace App\Helper;
-
-
 use App\Constants\WsMessage;
 use Hyperf\Server\Exception\ServerException;
 use Hyperf\Utils\ApplicationContext;
@@ -125,5 +121,19 @@ if (!function_exists('exception')) {
             throw new ServerException($class_name . '：此方法不存在');
         }
         throw new $class_name($code, $message);
+    }
+}
+
+if (!function_exists('debug_print')) {
+
+    /**
+     * @param $messge
+     */
+    function debug_print ($message)
+    {
+        $time = date('Ymd');
+        $filename = BASE_PATH . '/runtime/' . 'debug_print_' . $time . '.log';
+        file_put_contents($filename, var_export($message, true), FILE_APPEND);
+
     }
 }

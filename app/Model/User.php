@@ -4,12 +4,17 @@ declare (strict_types=1);
 
 namespace App\Model;
 
+use Hyperf\Database\Model\Collection;
 use Hyperf\DbConnection\Model\Model;
+use Hyperf\ModelCache\Cacheable;
+use Hyperf\ModelCache\CacheableInterface;
 
 /**
  */
-class User extends Model
+class User extends Model implements CacheableInterface
 {
+    use Cacheable;
+
     const STATUS_ONLINE = 1;
     const STATUS_OFFLINE = 0;
     const STATUS_TEXT = ['hide', 'online'];
@@ -36,4 +41,6 @@ class User extends Model
     {
         return $this->hasMany(FriendRelation::class, 'uid', 'id');
     }
+
+
 }
