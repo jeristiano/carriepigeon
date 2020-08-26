@@ -211,10 +211,9 @@ class ExampleTest extends HttpTestCase
     }
 
 
-    public function testGetRecommendedGroup(){
-      $group=  GroupRelation::query()->where('uid',39)->pluck('group_id');
 
-    }
+
+
 
 
 }

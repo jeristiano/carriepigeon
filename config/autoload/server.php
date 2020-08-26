@@ -38,6 +38,9 @@ return [
         'max_request' => 100000,
         'socket_buffer_size' => 2 * 1024 * 1024,
         'buffer_output_size' => 2 * 1024 * 1024,
+        // 将 public 替换为上传目录
+        'document_root' => BASE_PATH . '/public',
+        'enable_static_handler' => true,
     ],
     'callbacks' => [
         SwooleEvent::ON_WORKER_START => [Hyperf\Framework\Bootstrap\WorkerStartCallback::class, 'onWorkerStart'],
