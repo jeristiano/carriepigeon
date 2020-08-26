@@ -16,7 +16,7 @@ return [
     'engine' => BladeEngine::class,
     'mode' => Mode::TASK,
     'config' => [
-        'view_path' => BASE_PATH . '/storage/view/',
-        'cache_path' => BASE_PATH . '/runtime/view/',
+        'view_path' => BASE_PATH . '/resource/views/',
+        'cache_path' => BASE_PATH . '/runtime/views/',
     ],
 ];

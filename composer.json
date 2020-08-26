@@ -38,7 +38,8 @@
     "hyperf/websocket-server": "^2.0",
     "hyperf/task": "^2.0",
     "nesbot/carbon": "^2.6",
-    "hyperf/filesystem": "^2.0"
+    "hyperf/filesystem": "^2.0",
+    "duncan3dc/blade": "^4.8"
   },
   "require-dev": {
     "swoole/ide-helper": "^4.5",

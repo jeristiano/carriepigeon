@@ -106,7 +106,8 @@ class FriendController extends AbstractController
         $fromUserId = $this->request->input('from_user_id');
         $page = $this->request->input('page', 1);
         $size = $this->request->input('size', 10);
-        return $this->response->success(FriendService::getChatHistory((int)$fromUserId, $user->id, (int)$page, (int)$size));
+        return $this->response->success(FriendService::getChatHistory((int)$fromUserId,
+            $user['uid'], (int)$page, (int)$size));
     }
 
     /**

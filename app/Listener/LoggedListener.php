@@ -49,7 +49,7 @@ class LoggedListener implements ListenerInterface
     private function loggedIn ($user)
     {
         UserLoginLog::query()->insert([
-            'uid' => $user['uid'],
+            'uid' => $user['id'],
             'user_login_ip' => $user['user_login_ip']
         ]);
     }

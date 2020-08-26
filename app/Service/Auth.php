@@ -9,7 +9,6 @@ use App\Exception\BusinessException;
 use App\Model\User;
 use Phper666\JWTAuth\JWT;
 use Psr\Http\Message\ServerRequestInterface;
-use function App\Helper\app;
 
 /**
  * Class Auth

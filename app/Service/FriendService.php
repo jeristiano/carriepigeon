@@ -85,9 +85,9 @@ class FriendService
 
         return collect($groups)->map(function ($item, $key) {
             return [
-                'groupname' => $item['group']['group_name'],
-                'id' => $item['group']['id'],
-                'avatar' => $item['group']['avatar']
+                'groupname' => $item['group']['group_name'] ?? '',
+                'id' => $item['group']['id'] ?? '',
+                'avatar' => $item['group']['avatar'] ?? ''
             ];
         })->toArray();
     }
