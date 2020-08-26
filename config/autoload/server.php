@@ -1,14 +1,15 @@
 <?php
 
 declare(strict_types=1);
+
 /**
  * This file is part of Hyperf.
- *
  * @link     https://www.hyperf.io
  * @document https://doc.hyperf.io
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 use Hyperf\Server\Server;
 use Hyperf\Server\SwooleEvent;
 
@@ -28,7 +29,8 @@ return [
     ],
     'settings' => [
         'enable_coroutine' => true,
-        'worker_num' => swoole_cpu_num(),
+        'worker_num' => 1,
+        'task_worker_num' => 1,
         'pid_file' => BASE_PATH . '/runtime/hyperf.pid',
         'open_tcp_nodelay' => true,
         'max_coroutine' => 100000,
@@ -41,5 +43,8 @@ return [
         SwooleEvent::ON_WORKER_START => [Hyperf\Framework\Bootstrap\WorkerStartCallback::class, 'onWorkerStart'],
         SwooleEvent::ON_PIPE_MESSAGE => [Hyperf\Framework\Bootstrap\PipeMessageCallback::class, 'onPipeMessage'],
         SwooleEvent::ON_WORKER_EXIT => [Hyperf\Framework\Bootstrap\WorkerExitCallback::class, 'onWorkerExit'],
+        // Task callbacks
+        SwooleEvent::ON_TASK => [Hyperf\Framework\Bootstrap\TaskCallback::class, 'onTask'],
+        SwooleEvent::ON_FINISH => [Hyperf\Framework\Bootstrap\FinishCallback::class, 'onFinish'],
     ],
 ];

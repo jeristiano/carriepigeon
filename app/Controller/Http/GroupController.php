@@ -7,14 +7,18 @@ namespace App\Controller\Http;
 use App\Constants\ErrorCode;
 use App\Controller\AbstractController;
 use App\Exception\BusinessException;
+use App\Middleware\JwtAuthMiddleware;
+use App\Request\GroupApplyRequest;
 use App\Request\GroupCreateRequest;
 use App\Service\GroupService;
+use Hyperf\HttpServer\Annotation\Controller;
 use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\HttpServer\Annotation\RequestMapping;
-use App\Middleware\JwtAuthMiddleware;
+
 /**
  * Class GroupController
  * @package App\Controller\Http
+ * @Controller(prefix="group")
  */
 class GroupController extends AbstractController
 {
@@ -39,7 +43,7 @@ class GroupController extends AbstractController
      * @RequestMapping(path="getGroupRelation",methods="GET")
      * @Middleware(JwtAuthMiddleware::class)
      */
-    public function getGroupRelation()
+    public function getGroupRelation ()
     {
         $validated = $this->validator->make(
             $this->request->all(), [
@@ -49,7 +53,118 @@ class GroupController extends AbstractController
         if ($validated->fails()) {
             exception(BusinessException::class, ErrorCode::INVALID_PARAMETER, $validated->errors()->first());
         }
-        $input=$validated->validated();
+        $input = $validated->validated();
         return $this->response->success(GroupService::getGroupRelationById((int)$input['id']));
+    }
+
+    /**
+     * @RequestMapping(path="getRecommendedGroup",methods="GET")
+     * @Middleware(JwtAuthMiddleware::class)
+     */
+    public function getRecommendedGroup ()
+    {
+        $user = $this->request->getAttribute('user');
+        return $this->response->success(GroupService::getRecommendedGroup($user['uid'], 20));
+    }
+
+    /**
+     * @RequestMapping(path="search",methods="GET")
+     * @Middleware(JwtAuthMiddleware::class)
+     */
+    public function searchGroup ()
+    {
+
+        $keyword = $this->request->input('keyword');
+        $page = $this->request->input('page');
+        $size = $this->request->input('size');
+        return $this->response->success(GroupService::searchGroup($keyword, $page, $size));
+    }
+
+    /**
+     * @RequestMapping(path="apply",methods="POST")
+     * @Middleware(JwtAuthMiddleware::class)
+     */
+    public function apply (GroupApplyRequest $request)
+    {
+
+        $user = $this->request->getAttribute('user');
+
+        $result = GroupService::apply((int)$user['uid'], (int)$request->input('group_id'),
+            $request->input('application_reason'));
+        $msg = empty($result) ? '等待管理员验证 !' : '你已成功加入此群 !';
+        return $this->response->success($result, 0, $msg);
+    }
+
+    /**
+     * @RequestMapping(path="info",methods="GET")
+     * @Middleware(JwtAuthMiddleware::class)
+     */
+    public function groupInfo ()
+    {
+        $validated = $this->validator->make(
+            $this->request->all(), [
+                'group_id' => 'required'
+            ]
+        );
+        if ($validated->fails()) {
+            exception(BusinessException::class, ErrorCode::INVALID_PARAMETER, $validated->errors()->first());
+        }
+        $input = $validated->validated();
+        return $this->response->success(GroupService::findGroupById((int)$input['group_id']));
+    }
+
+    /**
+     * @RequestMapping(path="agreeApply",methods="GET")
+     * @Middleware(JwtAuthMiddleware::class)
+     */
+    public function agreeApply ()
+    {
+        $user = $this->request->getAttribute('user');
+        $validated = $this->validator->make(
+            $this->request->all(), [
+                'user_application_id' => 'required'
+            ]
+        );
+        if ($validated->fails()) {
+            exception(BusinessException::class, ErrorCode::INVALID_PARAMETER, $validated->errors()->first());
+        }
+        $input = $validated->validated();
+
+        $result = GroupService::agreeApply($user['uid'], (int)$input['user_application_id']);
+        return $this->response->success($result);
+    }
+
+
+    /**
+     * @RequestMapping(path="refuseApply",methods="GET")
+     * @Middleware(JwtAuthMiddleware::class)
+     */
+    public function refuseApply ()
+    {
+        $user = $this->request->getAttribute('user');
+        $validated = $this->validator->make(
+            $this->request->all(), [
+                'user_application_id' => 'required'
+            ]
+        );
+        if ($validated->fails()) {
+            exception(BusinessException::class, ErrorCode::INVALID_PARAMETER, $validated->errors()->first());
+        }
+        $input = $validated->validated();
+
+        GroupService::refuseApply($user['uid'], (int)$input['user_application_id']);
+        return $this->response->success($input['user_application_id']);
+    }
+
+    /**
+     * @RequestMapping(path="getChatHistory",methods="POST")
+     * @Middleware(JwtAuthMiddleware::class)
+     */
+    public function getChatHistory ()
+    {
+        $toGroupId = $this->request->input('to_group_id');
+        $page = $this->request->input('page',1);
+        $size = $this->request->input('size',10);
+        return $this->response->success(GroupService::getChatHistory((int)$toGroupId, (int)$page, (int)$size));
     }
 }
