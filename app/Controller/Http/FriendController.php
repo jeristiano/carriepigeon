@@ -60,7 +60,7 @@ class FriendController extends AbstractController
     public function searchFriend ()
     {
         $keyword = $this->request->input('keyword');
-        $page = $this->request->input('page', 10);
+        $page = $this->request->input('page', 1);
         $size = $this->request->input('size', 10);
         return $this->response->success(FriendService::searchFriend($keyword, (int)$page, (int)$size));
     }

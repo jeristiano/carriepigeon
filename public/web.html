@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script>
+        // 创建一个Socket实例
+        var protocols="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJkZWZhdWx0XzVmNDc0MmU4YjRhODM4LjY5ODIxMjA4IiwiaWF0IjoxNTk4NTA1NzA0LCJuYmYiOjE1OTg1MDU3MDQsImV4cCI6MTU5ODUxMjkwNCwidWlkIjozOSwidXNlcm5hbWUiOiJhZG1pbkBxcS5jb20iLCJqd3Rfc2NlbmUiOiJkZWZhdWx0In0._4Id2xiJZ6g8rHoJ5yjvmh_38-GtR7NaZaYZZ7R0_PA";
+        var socket = new WebSocket('ws://127.0.0.1:9502/ws',protocols);
+
+        console.log(socket)
+        // 打开Socket
+        socket.onopen = function(event) {
+            // 发送一个初始化消息
+            socket.send("init msg");
+
+        };
+        socket.onmessage = function(event) {
+            console.log('收到消息',event);
+
+        };
+
+        // 监听Socket的关闭
+        socket.onclose = function(event) {
+            console.log('关闭监听',event);
+        };
+
+        function  send()
+        {
+            socket.send("client msg");
+        }
+    </script>
+</head>
+<body>
+<button onclick="send()">发送消息</button>
+</body>
+</html>

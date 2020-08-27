@@ -5,13 +5,14 @@ namespace App\Service;
 
 
 use App\Constants\ErrorCode;
-use App\Exception\ApiException;
+use App\Constants\MemoryTable;
 use App\Exception\BusinessException;
+use App\Model\FriendRelation;
 use App\Model\Group;
 use App\Model\User;
 use App\Model\UserApplication;
-use Hyperf\Utils\Context;
-use Psr\Http\Message\ServerRequestInterface;
+use App\Task\UserTask;
+use Hyperf\Memory\TableManager;
 
 /**
  * Class UserService
@@ -27,7 +28,7 @@ class UserService
      */
     public static function findUserInfoById (int $uid)
     {
-        return User::query()->whereNull('deleted_at')->where(['id' => $uid])->first()?:[];
+        return User::query()->whereNull('deleted_at')->where(['id' => $uid])->first() ?: [];
 
     }
 
@@ -326,5 +327,35 @@ class UserService
     }
 
 
+    /**
+     * @param int $userId
+     * @param int $status
+     * @return array
+     */
+    public static function setUserStatus (int $userId, int $status = User::STATUS_ONLINE)
+    {
+        self::changeUserInfoById($userId, [
+            'status' => $status
+        ]);
+
+        $friendIds = make(FriendRelation::class)->getFriendIds($userId);
+
+        $onlineFds = collect([]);
+        collect($friendIds)->map(function ($item, $key) use ($onlineFds) {
+            $fd = TableManager::get(MemoryTable::USER_TO_FD)->get((string)$item, 'fd');
+            if ($fd) return $onlineFds->push($item);
+
+        });
+
+
+        $result = [
+            'user_id' => $userId,
+            'status' => FriendRelation::STATUS_TEXT[$status]
+        ];
+        $task = app()->get(UserTask::class);
+        $task->setUserStatus($onlineFds->toArray(), $result);
+
+        return $result;
+    }
 
 }

@@ -19,8 +19,6 @@ use App\Model\UserApplication;
 use App\Service\FriendService;
 use App\Service\UserService;
 use Carbon\Carbon;
-use Hyperf\Cache\Driver\RedisDriver;
-use Hyperf\Redis\Redis;
 use HyperfTest\HttpTestCase;
 
 /**
@@ -76,23 +74,6 @@ class ExampleTest extends HttpTestCase
         var_dump(json_encode($goRoutines));
     }
 
-    /**
-     * @param $groups
-     * @return array
-     */
-    private function getGroupMap ($groups)
-    {
-        return collect($groups)->map(function ($item) {
-            $resp['id'] = $item['id'];
-            $resp['username'] = $item['user']['username'];
-            $resp['avatar'] = $item['user']['avatar'];
-            $resp['sign'] = $item['user']['sign'];
-            $resp['status'] = FriendRelation::STATUS_TEXT[$item['user']['status']];
-            return $resp;
-        })->toArray();
-
-    }
-
     public function testGetApplication ()
     {
         $uid = 39;
@@ -138,7 +119,7 @@ class ExampleTest extends HttpTestCase
         $friendIds = FriendRelation::query()->where('uid', $uid)->pluck('friend_id');
         $friendIds[] = $uid;
 
-        $userInfos= User::query()
+        $userInfos = User::query()
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'desc')
             ->whereNotIn('id', $friendIds)
@@ -161,7 +142,8 @@ class ExampleTest extends HttpTestCase
     /**
      * @return int
      */
-    public function testGetHistory(){
+    public function testGetHistory ()
+    {
 
         $history = FriendChatHistory::query()
             ->whereNull('deleted_at')
@@ -174,7 +156,7 @@ class ExampleTest extends HttpTestCase
             ->get()
             ->toArray();
 
-        $result= collect($history)->map(function ($item) {
+        $result = collect($history)->map(function ($item) {
             $id = $item['from_uid'];
             $user = User::findFromCache($id);
             return [
@@ -186,11 +168,11 @@ class ExampleTest extends HttpTestCase
             ];
         })->toArray();
         debug_print(json_encode($result));
-        $this->assertIsArray($result,'array');
+        $this->assertIsArray($result, 'array');
     }
 
-
-    public function testGetGroupRelation(){
+    public function testGetGroupRelation ()
+    {
         $groupRelations = GroupRelation::query()
             ->with(['user'])
             ->whereNull('deleted_at')
@@ -210,10 +192,33 @@ class ExampleTest extends HttpTestCase
         debug_print($data);
     }
 
+    public function testGetFriends ()
+    {
+        $onlineFds = collect([]);
+        collect([40, 41])->each(function ($item, $key) use ($onlineFds) {
+//            $fd = TableManager::get(MemoryTable::USER_TO_FD)->get((string)$item, 'fd');
+            if ($item > 40) return $onlineFds->push($item);
 
+        });
+        var_dump($onlineFds);
+    }
 
+    /**
+     * @param $groups
+     * @return array
+     */
+    private function getGroupMap ($groups)
+    {
+        return collect($groups)->map(function ($item) {
+            $resp['id'] = $item['id'];
+            $resp['username'] = $item['user']['username'];
+            $resp['avatar'] = $item['user']['avatar'];
+            $resp['sign'] = $item['user']['sign'];
+            $resp['status'] = FriendRelation::STATUS_TEXT[$item['user']['status']];
+            return $resp;
+        })->toArray();
 
-
+    }
 
 
 }

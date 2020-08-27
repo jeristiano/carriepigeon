@@ -479,4 +479,6 @@ class FriendService
 
         return $userApplicationInfo;
     }
+
+
 }

@@ -26,7 +26,20 @@ return [
                 SwooleEvent::ON_REQUEST => [Hyperf\HttpServer\Server::class, 'onRequest'],
             ],
         ],
+        [
+            'name' => 'ws',
+            'type' => Server::SERVER_WEBSOCKET,
+            'host' => '0.0.0.0',
+            'port' => 9502,
+            'sock_type' => SWOOLE_SOCK_TCP,
+            'callbacks' => [
+                SwooleEvent::ON_HAND_SHAKE => [Hyperf\WebSocketServer\Server::class, 'onHandShake'],
+                SwooleEvent::ON_MESSAGE => [Hyperf\WebSocketServer\Server::class, 'onMessage'],
+                SwooleEvent::ON_CLOSE => [Hyperf\WebSocketServer\Server::class, 'onClose'],
+            ],
+        ]
     ],
+
     'settings' => [
         'enable_coroutine' => true,
         'worker_num' => 1,
@@ -38,6 +51,7 @@ return [
         'max_request' => 100000,
         'socket_buffer_size' => 2 * 1024 * 1024,
         'buffer_output_size' => 2 * 1024 * 1024,
+        'task_enable_coroutine' => false,
         // 将 public 替换为上传目录
         'document_root' => BASE_PATH . '/public',
         'enable_static_handler' => true,

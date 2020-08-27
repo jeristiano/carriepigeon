@@ -54,7 +54,6 @@ class JwtAuthMiddleware implements MiddlewareInterface
     {
 
         $token = $this->getToken($request);
-    var_dump($token);
         try {
             $this->jwt->checkToken($token);
         } catch (TokenValidException $e) {
