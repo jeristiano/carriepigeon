@@ -99,7 +99,6 @@ class UserService
      */
     public function getUnreadApplyCount (int $uid)
     {
-
         return UserApplication::query()
             ->whereNull('deleted_at')
             ->where('read_state', '=', UserApplication::UN_READ)

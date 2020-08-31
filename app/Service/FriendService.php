@@ -483,5 +483,74 @@ class FriendService
         return $userApplicationInfo;
     }
 
+    /**
+     * @param string $messageId
+     * @param int    $receptionState
+     * @return int
+     */
+    public function setFriendChatHistoryByMessageId (string $messageId, int $receptionState = FriendChatHistory::RECEIVED)
+    {
+        return FriendChatHistory::query()
+            ->whereNull('deleted_at')
+            ->where('message_id', '=', $messageId)
+            ->update(['reception_state' => $receptionState]);
+    }
+
+    /**
+     * @param int $uid
+     */
+    public function getUnreadMessageByToUserId (int $uid)
+    {
+        $history = FriendChatHistory::query()
+            ->whereNull('deleted_at')
+            ->where(['to_uid' => $uid])
+            ->where('reception_state', '=', FriendChatHistory::NOT_RECEIVED)
+            ->get()
+            ->toArray();
+
+        return collect($history)->map(function ($item) {
+            $id = $item['from_uid'];
+            $user = User::findFromCache($id);
+            return [
+                'from_uid' => $id,
+                'message_id' => $item['message_id'],
+                'username' => $user['username'] ?? '',
+                'avatar' => $user['avatar'] ?? '',
+                'content' => $item['content'],
+                'timestamp' => Carbon::parse($item['created_at'])->timestamp * 1000,
+            ];
+        })->toArray();
+
+    }
+
+    /**
+     * @param string $messageId
+     * @param int    $fromUserId
+     * @param int    $toUserId
+     * @param string $content
+     * @param int    $receptionState
+     *
+     */
+    public  function createFriendChatHistory(
+        string $messageId,
+        int $fromUserId,
+        int $toUserId,
+        string $content,
+        int $receptionState = FriendChatHistory::NOT_RECEIVED
+    ) {
+        $data = [
+            'message_id'      => $messageId,
+            'from_uid'        => $fromUserId,
+            'to_uid'          => $toUserId,
+            'content'         => $content,
+            'reception_state' => $receptionState
+        ];
+        $id   = FriendChatHistory::query()->insertGetId($data);
+        return FriendChatHistory::query()
+            ->whereNull('deleted_at')
+            ->where(['id' => $id])
+            ->first();
+    }
+
 
 }
