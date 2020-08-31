@@ -59,7 +59,7 @@ class FriendService
     private function getGroupArrayMap ($groups): array
     {
         return collect($groups)->map(function ($item) {
-            $resp['id'] = $item['id'];
+            $resp['id'] = $item['friend_id'];
             $resp['username'] = $item['user']['username'];
             $resp['avatar'] = $item['user']['avatar'];
             $resp['sign'] = $item['user']['sign'];

@@ -11,7 +11,6 @@ use App\Constants\Atomic;
 use App\Constants\MemoryTable;
 use App\Controller\AbstractController;
 use App\Model\User;
-use App\Service\UserService;
 use App\Task\UserTask;
 use Hyperf\Contract\OnCloseInterface;
 use Hyperf\Contract\OnMessageInterface;
@@ -40,6 +39,7 @@ class WebSocketController extends AbstractController implements OnMessageInterfa
      * @var \App\Service\UserService
      */
     protected $userService;
+
     /**
      * @param Response|Server $server
      */
@@ -51,7 +51,7 @@ class WebSocketController extends AbstractController implements OnMessageInterfa
             TableManager::get(MemoryTable::USER_TO_FD)->del((string)$userId);
             TableManager::get(MemoryTable::FD_TO_USER)->del((string)$fd);
         }
-       $this->userService->setUserStatus($userId, User::STATUS_OFFLINE);
+        $this->userService->setUserStatus($userId, User::STATUS_OFFLINE);
 
         $atomic = AtomicManager::get(Atomic::NAME);
         $atomic->sub(1);
@@ -101,6 +101,7 @@ class WebSocketController extends AbstractController implements OnMessageInterfa
      */
     private function setRequestContext ($server, $frame, $message)
     {
+        $this->logger->info('发送的消息:' . $frame->fd, $message);
         Context::set('request', new WsProtocol(
             $message['data'],
             $message['ext'],

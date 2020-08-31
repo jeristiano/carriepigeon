@@ -84,6 +84,7 @@ class FriendController extends AbstractController
 
     /**
      * @RequestMapping(path="send",methods="GET")
+     *
      */
     public function sendMessage ()
     {
@@ -92,12 +93,14 @@ class FriendController extends AbstractController
          */
         $protocol = Context::get('request');
         $data = $protocol->getData();
-
+        $this->logger->info('用户数据' , $data);
         $friendChatHistory = $this->friendService->createFriendChatHistory($data['message_id'], $data['from_user_id'], $data['to_id'], $data['content']);
 
 
         $userInfo = $this->userService->findUserInfoById($data['from_user_id']);
         $fd = TableManager::get(MemoryTable::USER_TO_FD)->get((string)$data['to_id'], 'fd') ?? '';
+
+        $this->logger->debug('用户id：' . $fd);
 
         app()->get(FriendTask::class)->sendMessage(
             $fd,
