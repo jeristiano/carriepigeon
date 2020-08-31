@@ -78,7 +78,7 @@ class UserController extends AbstractController
     {
         $email = $request->input('email');
         $password = $request->input('password');
-        return $this->response->success(UserService::register($email, $password));
+        return $this->response->success($this->userService->register($email, $password));
     }
 
 
@@ -134,7 +134,7 @@ class UserController extends AbstractController
         $goRoutines = parallel([
             //自己
             function () use ($user) {
-                return UserService::getUserProfile($user['uid']);
+                return $this->userService->getUserProfile($user['uid']);
             },
             //朋友
             function () use ($user) {
@@ -174,7 +174,7 @@ class UserController extends AbstractController
         $user = $this->request->getAttribute('user');
 
         //未读消息
-        return $this->response->success(UserService::getUnreadApplicationCount($user['uid']));
+        return $this->response->success($this->userService->getUnreadApplicationCount($user['uid']));
     }
 
     /**
@@ -204,7 +204,7 @@ class UserController extends AbstractController
     {
         $user = $this->request->getAttribute('user');
 
-        $result = UserService::updateUserProfile($user['uid'],
+        $result = $this->userService->updateUserProfile($user['uid'],
             $request->input('username'),
             $request->input('avatar'));
         if (!$result) {
@@ -236,7 +236,7 @@ class UserController extends AbstractController
         }
         $input = $validated->validated();
 
-        UserService::changeUserInfoById($user['uid'], ['sign' => $input['sign']]);
+        $this->userService->changeUserInfoById($user['uid'], ['sign' => $input['sign']]);
         return $this->response->success();
     }
 
@@ -261,7 +261,7 @@ class UserController extends AbstractController
             );
         }
         $input = $validated->validated();
-        UserService::changeUserInfoById($user['uid'], ['status' => (int)$input['status']]);
+        $this->userService->changeUserInfoById($user['uid'], ['status' => (int)$input['status']]);
         return $this->response->success();
     }
 

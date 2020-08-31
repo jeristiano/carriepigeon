@@ -8,7 +8,6 @@ use App\Component\Log\Log;
 use App\Constants\ErrorCode;
 use App\Constants\MemoryTable;
 use App\Exception\BusinessException;
-use App\Model\FriendChatHistory;
 use App\Model\Group;
 use App\Model\GroupChatHistory;
 use App\Model\GroupRelation;
@@ -19,7 +18,6 @@ use App\Task\UserTask;
 use Carbon\Carbon;
 use Hyperf\DbConnection\Db;
 use Hyperf\Memory\TableManager;
-use Hyperf\Utils\ApplicationContext;
 
 /**
  * Class GroupService
@@ -36,7 +34,7 @@ class GroupService
      * @param string $introduction
      * @param int    $validation
      */
-    public static function createGroup (int $userId, string $groupName, string $avatar, int $size, string $introduction, int $validation)
+    public function createGroup (int $userId, string $groupName, string $avatar, int $size, string $introduction, int $validation)
     {
         $groupId = Group::query()->insertGetId([
             'uid' => $userId,
@@ -56,13 +54,13 @@ class GroupService
         if (!$groupRelationId) {
             throw new BusinessException(ErrorCode::GROUP_RELATION_CREATE_FAIL);
         }
-        return self::findGroupById($groupId);
+        return $this->findGroupById($groupId);
     }
 
     /**
      * @param int $groupId
      */
-    public static function findGroupById (int $groupId)
+    public function findGroupById (int $groupId)
     {
         $groupInfo = Group::query()->where(['id' => $groupId])->first();
         if (!$groupInfo) {
@@ -76,9 +74,9 @@ class GroupService
      * @param int $groupId
      * @return array
      */
-    public static function getGroupRelationById (int $groupId)
+    public function getGroupRelationById (int $groupId)
     {
-        self::findGroupById($groupId);
+        $this->findGroupById($groupId);
 
         $groupRelations = GroupRelation::query()
             ->with(['user'])
@@ -103,7 +101,7 @@ class GroupService
      * @param int $limit
      * @return array
      */
-    public static function getRecommendedGroup ($uid, int $limit)
+    public function getRecommendedGroup ($uid, int $limit)
     {
         $hadGroup = GroupRelation::query()->where('uid', $uid)->pluck('group_id');
 
@@ -122,7 +120,7 @@ class GroupService
      * @param int    $size
      * @return array
      */
-    public static function searchGroup (string $keyword, int $page, int $size)
+    public function searchGroup (string $keyword, int $page, int $size)
     {
         return Group::query()->whereNull('deleted_at')
             ->where(['id' => $keyword])
@@ -139,17 +137,24 @@ class GroupService
      * @param string $applicationReason
      * @return \App\Model\Group|\Hyperf\Database\Model\Builder|\Hyperf\Database\Model\Model|object|string
      */
-    public static function apply (int $userId, int $groupId, string $applicationReason)
+    public function apply (int $userId, int $groupId, string $applicationReason)
     {
-        self::checkIsGroupRelation($userId, $groupId);
+        $this->checkIsGroupRelation($userId, $groupId);
 
-        $groupInfo = self::findGroupById($groupId);
+        $groupInfo = $this->findGroupById($groupId);
 
-        self::checkGroupSize($groupId, $groupInfo->size);
+        $this->checkGroupSize($groupId, $groupInfo->size);
 
         $applicationStatus = (($groupInfo->validation) == Group::VALIDATION_NOT) ? UserApplication::APPLICATION_STATUS_ACCEPT : UserApplication::APPLICATION_STATUS_CREATE;
 
-        $result = UserService::createUserApplication($userId, $groupInfo->uid, $groupId, UserApplication::APPLICATION_TYPE_GROUP, $applicationReason, $applicationStatus, UserApplication::UN_READ);
+        $result = make(UserService::class)->createUserApplication(
+            $userId,
+            $groupInfo->uid,
+            $groupId,
+            UserApplication::APPLICATION_TYPE_GROUP,
+            $applicationReason,
+            $applicationStatus,
+            UserApplication::UN_READ);
 
         if (!$result) {
             throw new BusinessException(ErrorCode::USER_CREATE_APPLICATION_FAIL);
@@ -176,7 +181,7 @@ class GroupService
      * @param int $groupId
      * @return null|\Hyperf\Database\Model\Builder|\Hyperf\Database\Model\Model|object
      */
-    public static function checkIsGroupRelation (int $userId, int $groupId)
+    public function checkIsGroupRelation (int $userId, int $groupId)
     {
         $check = GroupRelation::query()->whereNull('deleted_at')
             ->where(['uid' => $userId])
@@ -192,7 +197,7 @@ class GroupService
      * @param int $size
      * @return int
      */
-    public static function checkGroupSize (int $groupId, int $size)
+    public function checkGroupSize (int $groupId, int $size)
     {
         $count = GroupRelation::query()->whereNull('deleted_at')->where(['group_id' => $groupId])->count();
         if ($count >= $size) {
@@ -206,21 +211,24 @@ class GroupService
      * @param int $userApplicationId
      * @return int
      */
-    public static function agreeApply ($uid, int $userApplicationId)
+    public function agreeApply ($uid, int $userApplicationId)
     {
 
         try {
             Db::beginTransaction();
-            $userApp = self::beforeApply($uid, $userApplicationId, UserApplication::APPLICATION_TYPE_GROUP);
-            self::checkIsGroupRelation($userApp->uid, $userApp->group_id);
-            $groupInfo = self::findGroupById($userApp->group_id);
-            self::checkGroupSize($groupInfo->id, $groupInfo->size);
-            self::pushMess($userApp, $groupInfo);
+
+            $userApp = $this->beforeApply($uid, $userApplicationId, UserApplication::APPLICATION_TYPE_GROUP);
+            $this->checkIsGroupRelation($userApp->uid, $userApp->group_id);
+            $groupInfo = $this->findGroupById($userApp->group_id);
+            $this->checkGroupSize($groupInfo->id, $groupInfo->size);
+            $this->pushMess($userApp, $groupInfo);
+
             Db::commit();
             return GroupRelation::query()->insertGetId([
                 'uid' => $userApp->uid,
                 'group_id' => $userApp->group_id
             ]);
+
         } catch (\Exception $e) {
             Db::rollBack();
             Log::warning('朋友邀请出现更新错误', [$e->getMessage(), $e->getFile(),
@@ -235,10 +243,10 @@ class GroupService
      * @param int    $userApplicationId
      * @param string $userApplicationType
      */
-    public static function beforeApply (int $uid, int $userApplicationId, string $userApplicationType)
+    public function beforeApply (int $uid, int $userApplicationId, string $userApplicationType)
     {
-        $userApplicationInfo = self::findUserApplicationById($userApplicationId);
-        self::checkApplicationProcessed($uid, $userApplicationInfo);
+        $userApplicationInfo = $this->findUserApplicationById($userApplicationId);
+        $this->checkApplicationProcessed($uid, $userApplicationInfo);
 
         if ($userApplicationInfo->application_type !== $userApplicationType) {
             throw new BusinessException(ErrorCode::USER_APPLICATION_TYPE_WRONG);
@@ -248,7 +256,7 @@ class GroupService
 
     /**
      */
-    public static function checkApplicationProcessed ($uid, $userApplication)
+    public function checkApplicationProcessed ($uid, $userApplication)
     {
         if ($userApplication->application_status !== UserApplication::APPLICATION_STATUS_CREATE) {
             throw new BusinessException(ErrorCode::USER_APPLICATION_PROCESSED);
@@ -263,7 +271,7 @@ class GroupService
      * 查询用户申请
      * @param int $id
      */
-    public static function findUserApplicationById (int $id)
+    public function findUserApplicationById (int $id)
     {
         $userApplication = UserApplication::query()
             ->whereNull('deleted_at')
@@ -280,7 +288,7 @@ class GroupService
      * @param $userApp
      * @param $groupInfo
      */
-    private static function pushMess ($userApp, $groupInfo)
+    private function pushMess ($userApp, $groupInfo)
     {
         $pushGroupInfo = [
             'type' => UserApplication::APPLICATION_TYPE_GROUP,
@@ -301,17 +309,17 @@ class GroupService
 
     /**
      * @param int $userApplicationId
-     *
      * @return \App\Model\UserApplication|\Hyperf\Database\Model\Builder|\Hyperf\Database\Model\Collection|\Hyperf\Database\Model\Model
      */
-    public static function refuseApply($uid,int $userApplicationId)
+    public function refuseApply ($uid, int $userApplicationId)
     {
-        $userApplicationInfo = self::beforeApply($uid,$userApplicationId, UserApplication::APPLICATION_TYPE_GROUP);
-        FriendService::changeApplicationStatusById($userApplicationId, UserApplication::APPLICATION_STATUS_REFUSE);
+        $userApplicationInfo = $this->beforeApply($uid, $userApplicationId, UserApplication::APPLICATION_TYPE_GROUP);
+        make(FriendService::class)->changeApplicationStatusById($userApplicationId,
+            UserApplication::APPLICATION_STATUS_REFUSE);
 
         $fd = TableManager::get(MemoryTable::USER_TO_FD)->get((string)$userApplicationInfo->uid, 'fd') ?? '';
         if ($fd) {
-           app()->get(UserTask::class)->unReadApplicationCount($fd, '新');
+            app()->get(UserTask::class)->unReadApplicationCount($fd, '新');
         }
         return $userApplicationInfo;
     }
@@ -323,7 +331,8 @@ class GroupService
      * @param int $size
      * @return array
      */
-    public static function getChatHistory(int $toGroupId, int $page, int $size){
+    public function getChatHistory (int $toGroupId, int $page, int $size)
+    {
         $history = GroupChatHistory::query()
             ->whereNull('deleted_at')
             ->where(['to_group_id' => $toGroupId])

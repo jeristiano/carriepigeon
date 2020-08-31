@@ -10,7 +10,7 @@ use App\Exception\BusinessException;
 use App\Middleware\JwtAuthMiddleware;
 use App\Request\GroupApplyRequest;
 use App\Request\GroupCreateRequest;
-use App\Service\GroupService;
+use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\Controller;
 use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\HttpServer\Annotation\RequestMapping;
@@ -24,13 +24,20 @@ class GroupController extends AbstractController
 {
 
     /**
+     * @Inject()
+     * @var \App\Service\GroupService
+     */
+    protected $groupService;
+
+
+    /**
      * @param \App\Request\GroupCreateRequest $request
      */
     public function createGroup (GroupCreateRequest $request)
     {
         $user = $this->request->getAttribute('user');
 
-        $resp = GroupService::createGroup($user['uid'],
+        $resp = $this->groupService->createGroup($user['uid'],
             $request->input('group_name'),
             $request->input('avatar'),
             (int)$request->input('size'),
@@ -54,7 +61,7 @@ class GroupController extends AbstractController
             exception(BusinessException::class, ErrorCode::INVALID_PARAMETER, $validated->errors()->first());
         }
         $input = $validated->validated();
-        return $this->response->success(GroupService::getGroupRelationById((int)$input['id']));
+        return $this->response->success($this->groupService->getGroupRelationById((int)$input['id']));
     }
 
     /**
@@ -64,7 +71,7 @@ class GroupController extends AbstractController
     public function getRecommendedGroup ()
     {
         $user = $this->request->getAttribute('user');
-        return $this->response->success(GroupService::getRecommendedGroup($user['uid'], 20));
+        return $this->response->success($this->groupService->getRecommendedGroup($user['uid'], 20));
     }
 
     /**
@@ -77,7 +84,7 @@ class GroupController extends AbstractController
         $keyword = $this->request->input('keyword');
         $page = $this->request->input('page');
         $size = $this->request->input('size');
-        return $this->response->success(GroupService::searchGroup($keyword, $page, $size));
+        return $this->response->success($this->groupService->searchGroup($keyword, $page, $size));
     }
 
     /**
@@ -89,7 +96,7 @@ class GroupController extends AbstractController
 
         $user = $this->request->getAttribute('user');
 
-        $result = GroupService::apply((int)$user['uid'], (int)$request->input('group_id'),
+        $result = $this->groupService->apply((int)$user['uid'], (int)$request->input('group_id'),
             $request->input('application_reason'));
         $msg = empty($result) ? '等待管理员验证 !' : '你已成功加入此群 !';
         return $this->response->success($result, 0, $msg);
@@ -110,7 +117,7 @@ class GroupController extends AbstractController
             exception(BusinessException::class, ErrorCode::INVALID_PARAMETER, $validated->errors()->first());
         }
         $input = $validated->validated();
-        return $this->response->success(GroupService::findGroupById((int)$input['group_id']));
+        return $this->response->success($this->groupService->findGroupById((int)$input['group_id']));
     }
 
     /**
@@ -130,7 +137,7 @@ class GroupController extends AbstractController
         }
         $input = $validated->validated();
 
-        $result = GroupService::agreeApply($user['uid'], (int)$input['user_application_id']);
+        $result = $this->groupService->agreeApply($user['uid'], (int)$input['user_application_id']);
         return $this->response->success($result);
     }
 
@@ -152,7 +159,7 @@ class GroupController extends AbstractController
         }
         $input = $validated->validated();
 
-        GroupService::refuseApply($user['uid'], (int)$input['user_application_id']);
+        $this->groupService->refuseApply($user['uid'], (int)$input['user_application_id']);
         return $this->response->success($input['user_application_id']);
     }
 
@@ -163,8 +170,8 @@ class GroupController extends AbstractController
     public function getChatHistory ()
     {
         $toGroupId = $this->request->input('to_group_id');
-        $page = $this->request->input('page',1);
-        $size = $this->request->input('size',10);
-        return $this->response->success(GroupService::getChatHistory((int)$toGroupId, (int)$page, (int)$size));
+        $page = $this->request->input('page', 1);
+        $size = $this->request->input('size', 10);
+        return $this->response->success($this->groupService->getChatHistory((int)$toGroupId, (int)$page, (int)$size));
     }
 }

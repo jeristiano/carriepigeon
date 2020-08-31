@@ -26,7 +26,7 @@ class UserService
      * 查询用户不存在抛出异常
      * @param int $uid
      */
-    public static function findUserInfoById (int $uid)
+    public function findUserInfoById (int $uid)
     {
         return User::query()->whereNull('deleted_at')->where(['id' => $uid])->first() ?: [];
 
@@ -39,7 +39,7 @@ class UserService
      * @param string $password
      * @return bool
      */
-    public static function register (string $email, string $password): bool
+    public function register (string $email, string $password): bool
     {
         $insert = [
             'email' => $email,
@@ -79,7 +79,7 @@ class UserService
      * @param $uid
      * @return array
      */
-    public static function getUserProfile ($uid)
+    public function getUserProfile ($uid)
     {
         $user = User::query()->where('id', $uid)->first();
         if (!$user) return [];
@@ -97,7 +97,7 @@ class UserService
      * @param int $uid
      * @return int
      */
-    public static function getUnreadApplyCount (int $uid)
+    public function getUnreadApplyCount (int $uid)
     {
 
         return UserApplication::query()
@@ -113,13 +113,13 @@ class UserService
      * @param string $username
      * @param string $avatar
      */
-    public static function updateUserProfile (int $uid, ?string $username, ?string $avatar)
+    public function updateUserProfile (int $uid, ?string $username, ?string $avatar)
     {
         $update = [];
         if ($username) $update['username'] = $username;
         if ($avatar) $update['avatar'] = $avatar;
         if (!$update) return false;
-        self::changeUserInfoById($uid, $update);
+        $this->changeUserInfoById($uid, $update);
         return true;
     }
 
@@ -129,7 +129,7 @@ class UserService
      * @param array $data
      * @return int
      */
-    public static function changeUserInfoById (int $userId, array $data)
+    public function changeUserInfoById (int $userId, array $data)
     {
         return User::query()
             ->whereNull('deleted_at')
@@ -305,7 +305,7 @@ class UserService
      * @param int    $applicationStatus
      * @param int    $readState
      */
-    public static function createUserApplication (
+    public function createUserApplication (
         int $userId,
         int $receiverId,
         int $groupId,
@@ -328,16 +328,33 @@ class UserService
 
 
     /**
+     * 上线修改用户状态
      * @param int $userId
      * @param int $status
      * @return array
      */
-    public static function setUserStatus (int $userId, int $status = User::STATUS_ONLINE)
+    public function setUserStatus (int $userId, int $status = User::STATUS_ONLINE)
     {
-        self::changeUserInfoById($userId, [
+        $this->changeUserInfoById($userId, [
             'status' => $status
         ]);
 
+        $result = [
+            'user_id' => $userId,
+            'status' => FriendRelation::STATUS_TEXT[$status]
+        ];
+        $task = app()->get(UserTask::class);
+        $task->setUserStatus($this->getOnlineFriends($userId), $result);
+
+        return $result;
+    }
+
+    /**
+     * @param int $userId
+     * @return array
+     */
+    private function getOnlineFriends (int $userId)
+    {
         $friendIds = make(FriendRelation::class)->getFriendIds($userId);
 
         $onlineFds = collect([]);
@@ -346,16 +363,7 @@ class UserService
             if ($fd) return $onlineFds->push($item);
 
         });
-
-
-        $result = [
-            'user_id' => $userId,
-            'status' => FriendRelation::STATUS_TEXT[$status]
-        ];
-        $task = app()->get(UserTask::class);
-        $task->setUserStatus($onlineFds->toArray(), $result);
-
-        return $result;
+        return $onlineFds->toArray();
     }
 
 }

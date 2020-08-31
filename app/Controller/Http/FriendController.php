@@ -10,8 +10,7 @@ use App\Exception\BusinessException;
 use App\Middleware\JwtAuthMiddleware;
 use App\Request\FriendApplyRequest;
 use App\Request\FriendGroupRequst;
-use App\Service\FriendService;
-use App\Service\UserService;
+use Hyperf\Di\Annotation\Inject;
 use Hyperf\HttpServer\Annotation\Controller;
 use Hyperf\HttpServer\Annotation\Middleware;
 use Hyperf\HttpServer\Annotation\RequestMapping;
@@ -23,6 +22,19 @@ use Hyperf\HttpServer\Annotation\RequestMapping;
  */
 class FriendController extends AbstractController
 {
+
+    /**
+     * @Inject()
+     * @var \App\Service\UserService
+     */
+    protected $userService;
+
+    /**
+     * @Inject()
+     * @var \App\Service\FriendService
+     */
+    protected $friendService;
+
     /**
      * @RequestMapping(path="getRecommendedFriend",methods="GET")
      * @Middleware(JwtAuthMiddleware::class)
@@ -31,7 +43,7 @@ class FriendController extends AbstractController
     {
         $user = $this->request->getAttribute('user');
         $size = $this->request->input('size', 20);
-        return $this->response->success(FriendService::getRecommendedFriend($user['uid'], $size));
+        return $this->response->success($this->friendService->getRecommendedFriend($user['uid'], $size));
     }
 
     /**
@@ -44,7 +56,7 @@ class FriendController extends AbstractController
         $user = $this->request->getAttribute('user');
         $frGroupName = $request->input('friend_group_name');
 
-        $friendGroup = FriendService::createFriendGroup($user['uid'], $frGroupName);
+        $friendGroup = $this->friendService->createFriendGroup($user['uid'], $frGroupName);
 
         return $this->response->success([
             'id' => $friendGroup->id,
@@ -62,7 +74,7 @@ class FriendController extends AbstractController
         $keyword = $this->request->input('keyword');
         $page = $this->request->input('page', 1);
         $size = $this->request->input('size', 10);
-        return $this->response->success(FriendService::searchFriend($keyword, (int)$page, (int)$size));
+        return $this->response->success($this->friendService->searchFriend($keyword, (int)$page, (int)$size));
     }
 
     /**
@@ -77,7 +89,7 @@ class FriendController extends AbstractController
         $friendGroupId = $request->input('friend_group_id');
         $applicationReason = $request->input('application_reason');
 
-        return $this->response->success(FriendService::apply($user['uid'], (int)$receiverId, (int)
+        return $this->response->success($this->friendService->apply($user['uid'], (int)$receiverId, (int)
         $friendGroupId, (string)$applicationReason));
     }
 
@@ -91,7 +103,7 @@ class FriendController extends AbstractController
         $user = $this->request->getAttribute('user');
         $userAppId = $this->request->input('user_application_id');
         $friendGroupId = $this->request->input('friend_group_id');
-        $result = FriendService::agreeApply($user['uid'], (int)$userAppId, (int)$friendGroupId);
+        $result = $this->friendService->agreeApply($user['uid'], (int)$userAppId, (int)$friendGroupId);
         return $this->response->success($result);
     }
 
@@ -106,7 +118,7 @@ class FriendController extends AbstractController
         $fromUserId = $this->request->input('from_user_id');
         $page = $this->request->input('page', 1);
         $size = $this->request->input('size', 10);
-        return $this->response->success(FriendService::getChatHistory((int)$fromUserId,
+        return $this->response->success($this->friendService->getChatHistory((int)$fromUserId,
             $user['uid'], (int)$page, (int)$size));
     }
 
@@ -126,7 +138,7 @@ class FriendController extends AbstractController
             exception(BusinessException::class, ErrorCode::INVALID_PARAMETER, $validated->errors()->first());
         }
         $input = $validated->validated();
-        $userInfo = UserService::findUserInfoById((int)$input['user_id']);
+        $userInfo = $this->userService->findUserInfoById((int)$input['user_id']);
         return $this->response->success($userInfo);
     }
 
@@ -147,7 +159,7 @@ class FriendController extends AbstractController
         }
 
         $input = $validated->validated();
-        FriendService::refuseApply($user['uid'],(int)$input['user_application_id']);
+        $this->friendService->refuseApply($user['uid'], (int)$input['user_application_id']);
         return $this->response->success($input['user_application_id']);
     }
 

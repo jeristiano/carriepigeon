@@ -26,12 +26,13 @@ use Hyperf\Memory\TableManager;
  */
 class FriendService
 {
+
     /**
      * 获得用户的朋友列表
      * @param int $uid
      * @return array
      */
-    public static function getFriend (int $uid): array
+    public function getFriend (int $uid): array
     {
         $result = FriendGroup::query()
             ->where('uid', $uid)
@@ -43,7 +44,7 @@ class FriendService
         if (!$result) return [];
 
         return collect($result)->map(function ($item, $k) {
-            $friend['list'] = self::getGroupArrayMap($item['group']);
+            $friend['list'] = $this->getGroupArrayMap($item['group']);
             $friend['groupname'] = $item['friend_group_name'];
             $friend['id'] = $item['id'];
             return $friend;
@@ -55,7 +56,7 @@ class FriendService
      * @param $groups
      * @return array
      */
-    private static function getGroupArrayMap ($groups): array
+    private function getGroupArrayMap ($groups): array
     {
         return collect($groups)->map(function ($item) {
             $resp['id'] = $item['id'];
@@ -73,7 +74,7 @@ class FriendService
      * @param int $uid
      * @return array
      */
-    public static function getGroup (int $uid): array
+    public function getGroup (int $uid): array
     {
         $groups = GroupRelation::query()
             ->with(['group' => function ($query) {
@@ -98,7 +99,7 @@ class FriendService
      * @param int $uid
      * @param int $size
      */
-    public static function getRecommendedFriend (int $uid, $size = 20)
+    public function getRecommendedFriend (int $uid, $size = 20)
     {
         $friendIds = make(FriendRelation::class)->getFriendIds($uid);
         $friendIds[] = $uid;
@@ -117,13 +118,13 @@ class FriendService
      * @param $groupName
      * @return \App\Model\FriendGroup|\Hyperf\Database\Model\Builder|\Hyperf\Database\Model\Model|object
      */
-    public static function createFriendGroup ($uid, $groupName)
+    public function createFriendGroup ($uid, $groupName)
     {
         $frGroupId = FriendGroup::query()->insertGetId([
             'uid' => $uid,
             'friend_group_name' => $groupName
         ]);
-        return self::findFriendGroupById($frGroupId);
+        return $this->findFriendGroupById($frGroupId);
 
     }
 
@@ -131,7 +132,7 @@ class FriendService
      * @param int $friendGroupId
      * @return \Hyperf\Database\Model\Builder|\Hyperf\Database\Model\Model|object|FriendGroup
      */
-    public static function findFriendGroupById (int $friendGroupId)
+    public function findFriendGroupById (int $friendGroupId)
     {
         $result = FriendGroup::query()->where(['id' => $friendGroupId])->first();
         if (!$result) {
@@ -147,7 +148,7 @@ class FriendService
      * @param int    $size
      * @return array
      */
-    public static function searchFriend (string $keyword, int $page, int $size)
+    public function searchFriend (string $keyword, int $page, int $size)
     {
         $model = User::query()
             ->whereNull('deleted_at')
@@ -173,16 +174,17 @@ class FriendService
      * @param string $appReason
      * @return int
      */
-    public static function apply (int $userId, int $receiverId, int $friendGroupId, string $appReason)
+    public function apply (int $userId, int $receiverId, int $friendGroupId, string $appReason)
     {
         if ($userId == $receiverId) {
             exception(BusinessException::class, ErrorCode::FRIEND_NOT_ADD_SELF);
         }
 
-        self::checkFriendGroup($friendGroupId);
-        self::checkFriendRelation($userId, $receiverId);
+        $this->checkFriendGroup($friendGroupId);
+        $this->checkFriendRelation($userId, $receiverId);
 
-        $result = UserService::createUserApplication($userId, $receiverId, $friendGroupId,
+
+        $result = make(UserService::class)->createUserApplication($userId, $receiverId, $friendGroupId,
             UserApplication::APPLICATION_TYPE_FRIEND,
             $appReason,
             UserApplication::APPLICATION_STATUS_CREATE,
@@ -191,7 +193,7 @@ class FriendService
             exception(BusinessException::class, ErrorCode::USER_CREATE_APPLICATION_FAIL);
         }
 
-        self::notifyUser($receiverId);
+        $this->notifyUser($receiverId);
 
 
         return $result;
@@ -203,7 +205,7 @@ class FriendService
      * @param int $userId
      * @param int $receiverId
      */
-    private static function checkFriendRelation (int $userId, int $receiverId)
+    private function checkFriendRelation (int $userId, int $receiverId)
     {
         $check = FriendRelation::query()
             ->whereNull('deleted_at')
@@ -221,9 +223,9 @@ class FriendService
      * @param int $userId
      * @param int $receiverId
      */
-    private static function checkFriendGroup (int $friendGroupId)
+    private function checkFriendGroup (int $friendGroupId)
     {
-        $friendGroupInfo = self::findFriendGroupById($friendGroupId);
+        $friendGroupInfo = $this->findFriendGroupById($friendGroupId);
         if (!$friendGroupInfo) {
             exception(BusinessException::class, ErrorCode::FRIEND_GROUP_NOT_FOUND);
         }
@@ -234,7 +236,7 @@ class FriendService
     /**
      * @param $receiverId
      */
-    private static function notifyUser ($receiverId)
+    private function notifyUser ($receiverId)
     {
         go(function () use ($receiverId) {
             $fd = TableManager::get(MemoryTable::USER_TO_FD)->get((string)$receiverId, 'fd') ?? '';
@@ -252,26 +254,26 @@ class FriendService
      * @param int $userApplicationId
      * @param int $friendGroupId
      */
-    public static function agreeApply (int $uid, int $userApplicationId, int $friendGroupId)
+    public function agreeApply (int $uid, int $userApplicationId, int $friendGroupId)
     {
 
         Db::beginTransaction();
         try {
 
-            $userApp = self::beforeApply($uid, $userApplicationId, $friendGroupId);
-            self::findFriendGroupById($userApp->group_id);
-            self::findFriendGroupById($friendGroupId);
-            self::changeApplicationStatusById($userApplicationId, UserApplication::APPLICATION_STATUS_ACCEPT);
-            $fromCheck = self::checkIsFriendRelation($userApp->receiver_id, $userApp->uid);
-            $toCheck = self::checkIsFriendRelation($userApp->uid, $userApp->receiver_id);
+            $userApp = $this->beforeApply($uid, $userApplicationId, $friendGroupId);
+            $this->findFriendGroupById($userApp->group_id);
+            $this->findFriendGroupById($friendGroupId);
+            $this->changeApplicationStatusById($userApplicationId, UserApplication::APPLICATION_STATUS_ACCEPT);
+            $fromCheck = $this->checkIsFriendRelation($userApp->receiver_id, $userApp->uid);
+            $toCheck = $this->checkIsFriendRelation($userApp->uid, $userApp->receiver_id);
             if (!$fromCheck) {
-                self::createFriendRelation($userApp->receiver_id, $userApp->uid, $friendGroupId);
-                self::createFriendRelation($userApp->uid, $userApp->receiver_id, $userApp->group_id);
+                $this->createFriendRelation($userApp->receiver_id, $userApp->uid, $friendGroupId);
+                $this->createFriendRelation($userApp->uid, $userApp->receiver_id, $userApp->group_id);
             }
             if ($fromCheck && $toCheck) {
                 throw new BusinessException(ErrorCode::FRIEND_RELATION_ALREADY);
             }
-            $friendInfo = UserService::findUserInfoById($userApp->uid);
+            $friendInfo = make(UserService::class)->findUserInfoById($userApp->uid);
             if (!$friendInfo) {
                 throw new BusinessException(ErrorCode::USER_NOT_FOUND);
             }
@@ -283,7 +285,7 @@ class FriendService
             throw new BusinessException(ErrorCode::FRIEND_GROUP_CREATE_FAIL);
         }
 
-        self::pushMess($userApp, $friendInfo);
+        $this->pushMess($userApp, $friendInfo);
 
         return [
             'type' => UserApplication::APPLICATION_TYPE_FRIEND,
@@ -301,10 +303,10 @@ class FriendService
      * @param int    $userApplicationId
      * @param string $userApplicationType
      */
-    public static function beforeApply (int $uid, int $userApplicationId, string $userApplicationType)
+    public function beforeApply (int $uid, int $userApplicationId, string $userApplicationType)
     {
-        $userApplicationInfo = self::findUserApplicationById($userApplicationId);
-        self::checkApplicationProcessed($uid, $userApplicationInfo);
+        $userApplicationInfo = $this->findUserApplicationById($userApplicationId);
+        $this->checkApplicationProcessed($uid, $userApplicationInfo);
 
         if ($userApplicationInfo->application_type !== $userApplicationType) {
             throw new BusinessException(ErrorCode::USER_APPLICATION_TYPE_WRONG);
@@ -316,7 +318,7 @@ class FriendService
      * 查询用户申请
      * @param int $id
      */
-    public static function findUserApplicationById (int $id)
+    public function findUserApplicationById (int $id)
     {
         $userApplication = UserApplication::query()
             ->whereNull('deleted_at')
@@ -331,7 +333,7 @@ class FriendService
     /**
      * 验证申请进度
      */
-    public static function checkApplicationProcessed ($uid, $userApplication)
+    public function checkApplicationProcessed ($uid, $userApplication)
     {
         if ($userApplication->application_status !== UserApplication::APPLICATION_STATUS_CREATE) {
             throw new BusinessException(ErrorCode::USER_APPLICATION_PROCESSED);
@@ -347,7 +349,7 @@ class FriendService
      * @param int $applicationStatus
      * @return int
      */
-    public static function changeApplicationStatusById (int $id, int $applicationStatus)
+    public function changeApplicationStatusById (int $id, int $applicationStatus)
     {
         return UserApplication::query()->whereNull('deleted_at')->where(['id' => $id])->update([
             'application_status' => $applicationStatus
@@ -358,7 +360,7 @@ class FriendService
      * @param int $userId
      * @param int $friendId
      */
-    public static function checkIsFriendRelation (int $userId, int $friendId)
+    public function checkIsFriendRelation (int $userId, int $friendId)
     {
         return FriendRelation::query()
             ->whereNull('deleted_at')
@@ -375,7 +377,7 @@ class FriendService
      * @param int $groupId
      * @return int
      */
-    public static function createFriendRelation (int $userId, int $friendId, int $groupId)
+    public function createFriendRelation (int $userId, int $friendId, int $groupId)
     {
         return FriendRelation::query()->insertGetId([
             'uid' => $userId,
@@ -391,9 +393,10 @@ class FriendService
      * @param $selfInfo
      * @param $friendInfo
      */
-    private static function pushMess ($userApplicationInfo, $friendInfo)
+    private function pushMess ($userApplicationInfo, $friendInfo)
     {
-        $selfInfo = UserService::findUserInfoById($userApplicationInfo->receiver_id);
+
+        $selfInfo = make(UserService::class)->findUserInfoById($userApplicationInfo->receiver_id);
 
         if (!$selfInfo) {
             throw new BusinessException(ErrorCode::USER_NOT_FOUND, '用户id' . $userApplicationInfo->receiver_id . '不存在');
@@ -427,7 +430,7 @@ class FriendService
      * @param int $size
      * @return array
      */
-    public static function getChatHistory (int $fromUserId, int $userId, $page = 1, $size = 10)
+    public function getChatHistory (int $fromUserId, int $userId, $page = 1, $size = 10)
     {
         $history = FriendChatHistory::query()
             ->whereNull('deleted_at')
@@ -463,11 +466,11 @@ class FriendService
      * @param     $uid
      * @param int $apply_id
      */
-    public static function refuseApply (int $uid, int $apply_id)
+    public function refuseApply (int $uid, int $apply_id)
     {
 
-        $userApplicationInfo = self::beforeApply($uid, $apply_id, UserApplication::APPLICATION_TYPE_FRIEND);
-        self::changeApplicationStatusById($apply_id, UserApplication::APPLICATION_STATUS_REFUSE);
+        $userApplicationInfo = $this->beforeApply($uid, $apply_id, UserApplication::APPLICATION_TYPE_FRIEND);
+        $this->changeApplicationStatusById($apply_id, UserApplication::APPLICATION_STATUS_REFUSE);
 
 
         go(function () use ($userApplicationInfo) {
