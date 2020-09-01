@@ -17,6 +17,7 @@ use Hyperf\Event\Contract\ListenerInterface;
 use Hyperf\Framework\Event\BeforeMainServerStart;
 use Hyperf\Memory\AtomicManager;
 use Hyperf\Memory\TableManager;
+use Hyperf\Utils\Coroutine;
 
 /**
  * Class BeforeMainServerStartListener
